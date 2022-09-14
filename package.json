@@ -1,0 +1,29 @@
+{
+  "name": "my-wasm-reproduction",
+  "version": "0.0.0",
+  "private": true,
+  "repository": "",
+  "license": "MIT",
+  "author": "",
+  "scripts": {
+    "prepare": "yarn build",
+    "build": "yarn workspace my-wasm-reproduction run build",
+
+    "start": "concurrently 'npm:start:*' --restart-after 5000 --prefix-colors cyan,white,yellow",
+    "start:addon": "yarn workspace my-wasm-reproduction run start",
+    "start:test": "yarn workspace test-app run start",
+
+    "lint": "yarn workspaces run lint",
+    "lint:fix": "yarn workspaces run lint:fix",
+
+    "test": "yarn workspaces run test"
+  },
+  "devDependencies": {
+    "concurrently": "^7.2.1",
+    "prettier": "^2.5.1"
+  },
+  "workspaces": [
+    "my-wasm-reproduction",
+    "test-app"
+  ]
+}

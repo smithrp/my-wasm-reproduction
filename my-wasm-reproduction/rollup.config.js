@@ -1,58 +1,116 @@
-import babel from '@rollup/plugin-babel';
 import copy from 'rollup-plugin-copy';
 import { Addon } from '@embroider/addon-dev/rollup';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
+import ts from 'rollup-plugin-ts';
+import { defineConfig } from 'rollup';
 
 const addon = new Addon({
   srcDir: 'src',
   destDir: 'dist',
 });
 
-export default {
-  // This provides defaults that work well alongside `publicEntrypoints` below.
-  // You can augment this if you need to.
-  output: addon.output(),
+export default defineConfig([
+  {
+    // This provides defaults that work well alongside `publicEntrypoints` below.
+    // You can augment this if you need to.
+    output: addon.output(),
 
-  plugins: [
-    // These are the modules that users should be able to import from your
-    // addon. Anything not listed here may get optimized away.
-    addon.publicEntrypoints(['components/**/*.js', 'index.js']),
+    plugins: [
+      // These are the modules that users should be able to import from your
+      // addon. Anything not listed here may get optimized away.
+      addon.publicEntrypoints(['components/**/*.js', 'index.ts']),
 
-    // These are the modules that should get reexported into the traditional
-    // "app" tree. Things in here should also be in publicEntrypoints above, but
-    // not everything in publicEntrypoints necessarily needs to go here.
-    addon.appReexports(['components/**/*.js']),
+      // These are the modules that should get reexported into the traditional
+      // "app" tree. Things in here should also be in publicEntrypoints above, but
+      // not everything in publicEntrypoints necessarily needs to go here.
+      addon.appReexports(['components/**/*.js']),
 
-    // This babel config should *not* apply presets or compile away ES modules.
-    // It exists only to provide development niceties for you, like automatic
-    // template colocation.
-    //
-    // By default, this will load the actual babel config from the file
-    // babel.config.json.
-    babel({
-      babelHelpers: 'bundled',
-    }),
+      // This babel config should *not* apply presets or compile away ES modules.
+      // It exists only to provide development niceties for you, like automatic
+      // template colocation.
+      //
+      // By default, this will load the actual babel config from the file
+      // babel.config.json.
+      // babel({
+      //   babelHelpers: 'bundled',
+      // }),
 
-    // Follow the V2 Addon rules about dependencies. Your code can import from
-    // `dependencies` and `peerDependencies` as well as standard Ember-provided
-    // package names.
-    addon.dependencies(),
+      ts({
+        transpiler: 'babel',
+        browserslist: ['last 2 firefox versions', 'last 2 chrome versions'],
+        tsconfig: {
+          fileName: 'tsconfig.json',
+          hook: (config) => ({
+            ...config,
+            declaration: true,
+            declarationMap: true,
+            declarationDir: './dist',
+            removeComments: false,
+          }),
+        },
+      }),
 
-    // Ensure that standalone .hbs files are properly integrated as Javascript.
-    addon.hbs(),
+      // Follow the V2 Addon rules about dependencies. Your code can import from
+      // `dependencies` and `peerDependencies` as well as standard Ember-provided
+      // package names.
+      addon.dependencies(),
 
-    // addons are allowed to contain imports of .css files, which we want rollup
-    // to leave alone and keep in the published output.
-    addon.keepAssets(['**/*.css']),
+      // Ensure that standalone .hbs files are properly integrated as Javascript.
+      addon.hbs(),
 
-    // Remove leftover build artifacts when starting a new build.
-    addon.clean(),
+      // addons are allowed to contain imports of .css files, which we want rollup
+      // to leave alone and keep in the published output.
+      addon.keepAssets(['**/*.css']),
 
-    // Copy Readme and License into published package
-    copy({
-      targets: [
-        { src: '../README.md', dest: '.' },
-        { src: '../LICENSE.md', dest: '.' },
-      ],
-    }),
-  ],
-};
+      // Remove leftover build artifacts when starting a new build.
+      // addon.clean(),
+
+      // // Copy Readme and License into published package
+      // copy({
+      //   targets: [
+      //     { src: '../README.md', dest: '.' },
+      //     { src: '../LICENSE.md', dest: '.' },
+      //   ],
+      // }),
+    ],
+  },
+  {
+    watch: {
+      chokidar: {
+        usePolling: true,
+      },
+    },
+    output: {
+      ...addon.output(),
+      sourcemap: true,
+    },
+    plugins: [
+      addon.publicEntrypoints(['worker/index.ts']),
+      nodeResolve({ browser: true }),
+      ts({
+        transpiler: 'babel',
+        browserslist: ['last 2 firefox versions', 'last 2 chrome versions'],
+        tsconfig: {
+          fileName: 'tsconfig.json',
+          hook: (config) => ({
+            ...config,
+            declaration: true,
+            declarationMap: true,
+            declarationDir: './dist',
+            removeComments: false,
+          }),
+        },
+      }),
+      addon.dependencies(),
+      copy({
+        hook: 'writeBundle',
+        targets: [
+          {
+            src: 'src/worker/regex.wasm',
+            dest: 'dist/worker',
+          },
+        ],
+      }),
+    ],
+  },
+]);
